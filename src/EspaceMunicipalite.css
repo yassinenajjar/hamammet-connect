@@ -1,0 +1,245 @@
+.municipalite-page {
+  min-height: 100vh;
+  background: #f4f6f9;
+  color: #202b3c;
+  font-family: Arial, sans-serif;
+}
+
+.municipalite-header {
+  background: #ffffff;
+  padding: 20px 6%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #e4e8ee;
+}
+
+.municipalite-header > div {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.municipalite-logo {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #176b57;
+  color: white;
+  font-size: 25px;
+  font-weight: bold;
+}
+
+.municipalite-header h2,
+.municipalite-header p {
+  margin: 0;
+}
+
+.municipalite-header h2 {
+  font-size: 19px;
+}
+
+.municipalite-header p {
+  margin-top: 5px;
+  color: #718096;
+  font-size: 13px;
+}
+
+.municipalite-header button {
+  border: 1px solid #d9e1e8;
+  background: white;
+  padding: 11px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.municipalite-contenu {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 40px 22px;
+}
+
+.municipalite-surtitre {
+  color: #176b57;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.municipalite-contenu > h1 {
+  margin: 10px 0;
+  font-size: 32px;
+}
+
+.municipalite-intro {
+  color: #718096;
+  margin-bottom: 30px;
+}
+
+.municipalite-statistiques {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 35px;
+}
+
+.municipalite-statistiques > div {
+  background: white;
+  padding: 22px;
+  border: 1px solid #e5eaf0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.municipalite-statistiques span {
+  color: #718096;
+  font-size: 13px;
+}
+
+.municipalite-statistiques strong {
+  font-size: 30px;
+  color: #176b57;
+}
+
+.municipalite-liste {
+  background: white;
+  border: 1px solid #e5eaf0;
+  border-radius: 14px;
+  padding: 25px;
+}
+
+.municipalite-liste > h2 {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.municipalite-vide {
+  text-align: center;
+  padding: 45px 15px;
+  color: #718096;
+}
+
+.municipalite-vide span {
+  font-size: 38px;
+}
+
+.municipalite-vide h3 {
+  color: #202b3c;
+}
+
+.municipalite-carte {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 22px;
+  padding: 20px 0;
+  border-top: 1px solid #e8edf2;
+}
+
+.municipalite-carte > img {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.municipalite-details {
+  min-width: 0;
+}
+
+.municipalite-carte-titre {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.municipalite-carte-titre h3 {
+  margin: 0 0 12px;
+}
+
+.municipalite-statut {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #fff1cf;
+  color: #8a5b00;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.statut-en-cours {
+  background: #e0edff;
+  color: #2057a5;
+}
+
+.statut-traitée {
+  background: #dff5e8;
+  color: #176b43;
+}
+
+.municipalite-details > p {
+  line-height: 1.6;
+}
+
+.municipalite-meta {
+  color: #718096;
+  font-size: 13px;
+}
+
+.municipalite-details label {
+  display: block;
+  margin-top: 15px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.municipalite-details select {
+  width: 100%;
+  max-width: 240px;
+  padding: 10px;
+  border: 1px solid #d9e1e8;
+  border-radius: 8px;
+  background: white;
+}
+
+@media (max-width: 750px) {
+  .municipalite-statistiques {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .municipalite-carte {
+    grid-template-columns: 1fr;
+  }
+
+  .municipalite-carte > img {
+    height: 220px;
+  }
+
+  .municipalite-carte-titre {
+    flex-direction: column;
+  }
+
+  .municipalite-header {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 450px) {
+  .municipalite-statistiques {
+    grid-template-columns: 1fr;
+  }
+
+  .municipalite-header h2 {
+    font-size: 15px;
+  }
+
+  .municipalite-contenu > h1 {
+    font-size: 25px;
+  }
+}
