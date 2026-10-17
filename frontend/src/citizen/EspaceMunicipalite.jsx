@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const STATUTS_ADMIN = [
   "Reçue",
@@ -70,6 +71,9 @@ function EspaceMunicipalite({
           </p>
         </div>
 
+        <Link className="hc-button hc-primary" to="/dashboard">
+          Tableau de bord connecté
+        </Link>
         <button className="hc-button hc-outline" onClick={retour}>
           Déconnexion
         </button>

@@ -1,12 +1,13 @@
 # Hammamet Connect
 
-Hammamet Connect includes a Laravel API and two React interfaces: the citizen and municipal prototype from `ui/frontend`, plus the API-connected dashboard from `master`.
+Hammamet Connect is one React application with a citizen portal and a municipal dashboard, backed by a Laravel API.
 
 ## Project structure
 
 - `backend/` - Laravel API, database migrations, and seeders.
-- `frontend/` - citizen and municipal UI prototype.
-- `frontend/dashboard/` - API-connected municipal dashboard.
+- `frontend/src/citizen/` - citizen portal and its prototype municipal area.
+- `frontend/src/municipal/` - API connected municipal dashboard.
+- `frontend/` - shared React, Vite, and routing setup.
 - `docs/` - project diagrams and reference material.
 
 ## Run locally
@@ -23,18 +24,11 @@ Requirements: Node.js, PHP 8.4.1 or newer for the installed backend dependencies
    php artisan serve
    ```
 
-4. To run the citizen and municipal UI prototype, start a second terminal in `frontend/`:
+4. Start the React app from `frontend/`:
 
    ```powershell
    npm.cmd install
    npm.cmd run dev
    ```
 
-5. To run the API-connected dashboard instead, use `frontend/dashboard/`:
-
-   ```powershell
-   npm.cmd install
-   npm.cmd run dev
-   ```
-
-The connected dashboard calls `http://127.0.0.1:8000/api` by default. Set `VITE_API_BASE_URL` in `frontend/dashboard/.env.local` to override it. The API provides `GET /api/reports`, `GET /api/reports/{reference}`, `PATCH /api/reports/{reference}`, and `GET /api/services`.
+The citizen portal opens at `/`. The municipal dashboard is available at `/dashboard`. It calls `http://127.0.0.1:8000/api` by default; set `VITE_API_BASE_URL` in `frontend/.env.local` to override it. The prototype keeps its sample data in browser memory. The API provides `GET /api/reports`, `GET /api/reports/{reference}`, `PATCH /api/reports/{reference}`, and `GET /api/services`.
