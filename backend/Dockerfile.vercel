@@ -1,0 +1,18 @@
+FROM dunglas/frankenphp:1-php8.4
+
+RUN install-php-extensions pdo_mysql mbstring intl zip opcache
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+
+COPY . .
+
+RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+ENV SERVER_NAME=:80
+ENV SERVER_ROOT=public
+
+CMD ["php-server", "-r", "public/"]

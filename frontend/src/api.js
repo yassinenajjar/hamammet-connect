@@ -1,4 +1,5 @@
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '')
+const defaultApiBaseUrl = import.meta.env.DEV ? 'http://127.0.0.1:8000/api' : '/api'
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || defaultApiBaseUrl).replace(/\/$/, '')
 let publicStatisticsRequest
 
 export function getPublicStatistics() {
@@ -35,4 +36,11 @@ export async function apiRequest(path, options = {}) {
     throw error
   }
   return payload
+}
+
+export function prepareReportWithAssistant(messages) {
+  return apiRequest('/report-assistant/messages', {
+    method: 'POST',
+    body: JSON.stringify({ messages }),
+  })
 }
