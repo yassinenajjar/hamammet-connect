@@ -130,7 +130,7 @@ class ReportAssistantTest extends TestCase
 
         $this->postJson('/api/report-assistant/messages', [
             'messages' => [['role' => 'user', 'content' => 'Un lampadaire est en panne rue de la Corniche.']],
-        ])->assertStatus(503)->assertJsonPath('message', 'L’assistant est momentanément indisponible. Ton message a été conservé, réessaie dans un instant.');
+        ])->assertStatus(503)->assertJsonPath('message', 'La limite de requêtes Gemini est atteinte. Vérifie le quota de l’API ou réessaie plus tard.');
     }
 
     public function test_temporary_gemini_server_error_is_retried_once_and_can_succeed(): void
@@ -152,6 +152,15 @@ class ReportAssistantTest extends TestCase
         ])->assertOk()->assertJsonPath('data.status', 'ready_for_review');
 
         Http::assertSentCount(2);
+    }
+
+    public function test_gemini_server_unavailability_returns_a_clear_retryable_error(): void
+    {
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['error' => ['code' => 503]], 503)]);
+
+        $this->postJson('/api/report-assistant/messages', [
+            'messages' => [['role' => 'user', 'content' => 'Un lampadaire est en panne rue de la Corniche.']],
+        ])->assertStatus(503)->assertJsonPath('message', 'Gemini est temporairement indisponible. Ton message a été conservé, réessaie dans un instant.');
     }
 
     public function test_gemini_authentication_failure_is_reported_as_a_server_configuration_error(): void
