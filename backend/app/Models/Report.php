@@ -17,6 +17,9 @@ class Report extends Model
 
     protected $fillable = [
         'reference',
+        'reporter_id',
+        'category_id',
+        'tracking_secret_hash',
         'title',
         'description',
         'category',
@@ -50,6 +53,16 @@ class Report extends Model
         return $this->belongsTo(MunicipalService::class);
     }
 
+    public function reporter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reporter_id');
+    }
+
+    public function reportCategory(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
     public function evidence(): HasMany
     {
         return $this->hasMany(Evidence::class);
@@ -63,5 +76,15 @@ class Report extends Model
     public function staffNotes(): HasMany
     {
         return $this->hasMany(StaffNote::class)->latest();
+    }
+
+    public function assignmentHistory(): HasMany
+    {
+        return $this->hasMany(ReportAssignmentHistory::class)->orderBy('occurred_at');
+    }
+
+    public function urgencyHistory(): HasMany
+    {
+        return $this->hasMany(ReportUrgencyHistory::class)->orderBy('occurred_at');
     }
 }

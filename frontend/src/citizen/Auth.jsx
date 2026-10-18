@@ -15,7 +15,7 @@ function Auth({
 
   const inscription = mode === "inscription";
 
-  function envoyer(e) {
+  async function envoyer(e) {
     e.preventDefault();
     setErreur("");
 
@@ -65,12 +65,11 @@ function Auth({
       motDePasse,
     };
 
-    const resultat = inscription
-      ? onInscription(donnees)
-      : onConnexion(donnees);
-
-    if (resultat) {
-      setErreur(resultat);
+    try {
+      const resultat = await (inscription ? onInscription(donnees) : onConnexion(donnees));
+      if (resultat) setErreur(resultat);
+    } catch (error) {
+      setErreur(error.message || "La connexion n'a pas abouti.");
     }
   }
 

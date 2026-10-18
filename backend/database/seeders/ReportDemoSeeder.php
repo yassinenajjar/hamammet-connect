@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\MunicipalService;
 use App\Models\Report;
+use App\Models\Category;
 use Illuminate\Database\Seeder;
 
 class ReportDemoSeeder extends Seeder
@@ -62,6 +63,7 @@ class ReportDemoSeeder extends Seeder
             );
 
             $serviceIds[$service->category] = $service->id;
+            Category::query()->where('name', $service->category)->update(['municipal_service_id' => $service->id]);
         }
 
         $reports = [
@@ -176,6 +178,7 @@ class ReportDemoSeeder extends Seeder
                 ['reference' => $reportAttributes['reference']],
                 [
                     ...$reportAttributes,
+                    'category_id' => Category::query()->where('name', $reportAttributes['category'])->value('id'),
                     'municipal_service_id' => $serviceIds[$reportAttributes['category']],
                 ],
             );

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Bell, ChevronDown, LayoutDashboard, Map, Menu, Settings, ChartNoAxesColumn, Building2, ClipboardList, Search, Waves, X, House } from 'lucide-react'
 import { urgencyLabels } from '../data/reportOptions'
 import { useReports } from '../hooks/useReports'
+import { apiRequest } from '../../api'
 
 const links = [
   { to: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -18,9 +19,23 @@ export function Layout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [staff, setStaff] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [login, setLogin] = useState({ email: '', password: '' })
+  const [authError, setAuthError] = useState('')
   const location = useLocation()
   const navigate = useNavigate()
   const { reports } = useReports()
+  useEffect(() => {
+    if (!sessionStorage.getItem('hc_api_token')) {
+      setAuthReady(true)
+      return
+    }
+    apiRequest('/user').then((payload) => {
+      if (payload.data?.role === 'staff' || payload.data?.role === 'admin') setStaff(payload.data)
+      else sessionStorage.removeItem('hc_api_token')
+    }).catch(() => sessionStorage.removeItem('hc_api_token')).finally(() => setAuthReady(true))
+  }, [])
   const urgentReports = reports.filter((report) => report.urgency === 'critical' || report.urgency === 'high').slice(0, 3)
   const title = location.pathname.startsWith('/reports/') ? 'Détail de la réclamation' : titles[location.pathname] || 'Tableau de bord'
   function handleSearch(event) {
@@ -32,6 +47,21 @@ export function Layout() {
       navigate(`/reports?q=${encodeURIComponent(query)}`)
     }
   }
+  async function signIn(event) {
+    event.preventDefault()
+    setAuthError('')
+    try {
+      const payload = await apiRequest('/login', { method: 'POST', body: JSON.stringify(login) })
+      if (!['staff', 'admin'].includes(payload.data?.role)) throw new Error('Ce compte ne dispose pas d’un accès municipal.')
+      sessionStorage.setItem('hc_api_token', payload.token)
+      setStaff(payload.data)
+      window.location.reload()
+    } catch (error) {
+      setAuthError(error.message)
+    }
+  }
+  if (!authReady || (sessionStorage.getItem('hc_api_token') && !staff)) return <main className="main-area"><section className="panel empty-results">Vérification de l’accès municipal…</section></main>
+  if (!staff) return <main className="main-area"><section className="panel empty-results"><h1>Connexion municipale</h1><form onSubmit={signIn}><label>Adresse e-mail<input type="email" value={login.email} onChange={(event) => setLogin({ ...login, email: event.target.value })} required /></label><label>Mot de passe<input type="password" value={login.password} onChange={(event) => setLogin({ ...login, password: event.target.value })} required /></label>{authError && <p role="alert">{authError}</p>}<button className="primary-button" type="submit">Se connecter</button></form></section></main>
   return <div className="app-shell">
     {open && <button className="scrim" aria-label="Fermer le menu" onClick={() => setOpen(false)} />}
     <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>

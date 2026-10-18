@@ -1,4 +1,4 @@
-import { apiRequest } from './reportService'
+import { apiRequest } from '../../api'
 
 export const municipalService = {
   list: () => apiRequest('/services'),

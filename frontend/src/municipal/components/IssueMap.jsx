@@ -10,15 +10,15 @@ import 'leaflet/dist/leaflet.css'
 
 const HAMMAMET = [36.400, 10.616]
 const pinIcon = (report) => {
-  const color = report.status === 'resolved' ? '#16A34A' : urgencyColors[report.urgency]
+  const color = report.status === 'resolved' ? '#16A34A' : urgencyColors[report.urgency] || '#64748B'
   return L.divIcon({ className: 'pin-wrap', html: `<span class="map-pin" style="--pin:${color}"><i></i></span>`, iconSize: [30, 38], iconAnchor: [15, 36], popupAnchor: [0, -34] })
 }
 function MapController({ selected, reports, focusReport, compact }) {
   const map = useMap()
   useEffect(() => {
-    if (selected) map.flyTo(selected.coordinates, Math.max(map.getZoom(), 16), { duration: 0.5 })
-    else if (focusReport) map.setView(focusReport.coordinates, 16)
-    else if (reports.length) map.fitBounds(L.latLngBounds(reports.map((report) => report.coordinates)), { padding: compact ? [18, 18] : [48, 48], maxZoom: 14 })
+    if (selected?.coordinates) map.flyTo(selected.coordinates, Math.max(map.getZoom(), 16), { duration: 0.5 })
+    else if (focusReport?.coordinates) map.setView(focusReport.coordinates, 16)
+    else if (reports.some((report) => report.coordinates)) map.fitBounds(L.latLngBounds(reports.filter((report) => report.coordinates).map((report) => report.coordinates)), { padding: compact ? [18, 18] : [48, 48], maxZoom: 14 })
   }, [selected, reports, focusReport, compact, map])
   useEffect(() => {
     const observer = new ResizeObserver(() => map.invalidateSize({ pan: false }))
@@ -44,7 +44,7 @@ export default function IssueMap({ compact = false, focusReport = null }) {
   const [tilesReady, setTilesReady] = useState(false)
   const [tileError, setTileError] = useState(false)
   const filtered = useMemo(() => reports.filter((r) => (!focusReport || r.id === focusReport.id) &&
-    (!category || r.category === category) && (!urgency || r.urgency === urgency) && (!status || r.status === status) &&
+    r.coordinates && (!category || r.category === category) && (!urgency || r.urgency === urgency) && (!status || r.status === status) &&
     `${r.title} ${r.id} ${r.category} ${r.location}`.toLowerCase().includes(query.toLowerCase())), [reports, category, urgency, status, query, focusReport])
   const selected = filtered.find((r) => r.id === selectedId) ?? null
   const cats = [...new Set(reports.map((r) => r.category))]
@@ -54,7 +54,7 @@ export default function IssueMap({ compact = false, focusReport = null }) {
       <div className="gis-panel-heading"><div><div className="eyebrow"><span className="live-dot"/> DONNÉES SYNCHRONISÉES</div><h2>Signalements <span>{filtered.length}</span></h2></div><button className="map-panel-toggle" aria-label={panelOpen ? 'Réduire le panneau' : 'Ouvrir le panneau'} onClick={() => setPanelOpen(!panelOpen)}>{panelOpen ? <PanelLeftClose size={17}/> : <PanelLeftOpen size={17}/>}</button></div>
       {panelOpen && <>
         <label className="gis-search"><Search size={15}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un lieu ou signalement" aria-label="Rechercher sur la carte"/></label>
-        <div className="gis-filters"><select value={category} onChange={(e)=>setCategory(e.target.value)} aria-label="Filtrer par catégorie"><option value="">Toutes catégories</option>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select><select value={urgency} onChange={(e)=>setUrgency(e.target.value)} aria-label="Filtrer par urgence"><option value="">Toutes urgences</option><option value="critical">Critique</option><option value="high">Élevée</option><option value="normal">Normale</option></select><select value={status} onChange={(e)=>setStatus(e.target.value)} aria-label="Filtrer par statut"><option value="">Tous statuts</option>{Object.entries(statusLabels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></div>
+    <div className="gis-filters"><select value={category} onChange={(e)=>setCategory(e.target.value)} aria-label="Filtrer par catégorie"><option value="">Toutes catégories</option>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select><select value={urgency} onChange={(e)=>setUrgency(e.target.value)} aria-label="Filtrer par urgence"><option value="">Toutes urgences</option><option value="critical">Critique</option><option value="high">Élevée</option><option value="normal">Normale</option></select><select value={status} onChange={(e)=>setStatus(e.target.value)} aria-label="Filtrer par statut"><option value="">Tous statuts</option>{Object.entries(statusLabels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></div>
         <div className="gis-results" aria-label="Réclamations visibles sur la carte">{reportsLoading ? <div className="gis-empty">Chargement des signalements…</div> : filtered.length ? filtered.map((r)=><button key={r.id} onClick={()=>setSelectedId(r.id)} className={`gis-report ${selectedId===r.id?'is-selected':''}`}><span className="gis-pin" style={{'--pin':r.status==='resolved'?'#16A34A':urgencyColors[r.urgency]}}><MapPin size={16}/></span><span><b>{r.title}</b><small>{r.id} · {r.location}</small><span className="gis-badges"><i className={`badge urgency-${r.urgency}`}>{urgencyLabels[r.urgency]}</i><i className={`badge status-${r.status}`}>{statusLabels[r.status]}</i></span></span></button>) : <div className="gis-empty">Aucun résultat. Essayez d’alléger les filtres.</div>}</div>
         <div className="gis-legend"><b>LÉGENDE</b><span><i style={{background:'#DC2626'}}/>Critique</span><span><i style={{background:'#EA580C'}}/>Élevée</span><span><i style={{background:'#CA8A04'}}/>Normale</span><span><i style={{background:'#16A34A'}}/>Résolue</span><small>Le nombre d’un groupe représente les réclamations, pas leur gravité.</small></div>
         {selected && <div className="gis-selected"><small>RÉCLAMATION SÉLECTIONNÉE</small><b>{selected.title}</b><span>{selected.reference ?? selected.id} · {selected.location}</span><div><i className={`badge urgency-${selected.urgency}`}>{urgencyLabels[selected.urgency]}</i><i className={`badge status-${selected.status}`}>{statusLabels[selected.status]}</i></div><Link to={`/reports/${selected.id}`}>Ouvrir le dossier <span>→</span></Link></div>}

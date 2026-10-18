@@ -13,6 +13,7 @@ class MunicipalServiceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'id' => $this->id,
             'name' => $this->name,
             'agents' => $this->agent_count.' agents',
             'percent' => $this->resolution_rate.'%',

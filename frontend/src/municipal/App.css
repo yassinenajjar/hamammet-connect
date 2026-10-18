@@ -15,3 +15,11 @@
 @media(max-width:700px){.map-gis{overflow:hidden}.map-gis>.map-canvas{min-width:0}.gis-mobile-toggle{left:min(268px,calc(100% - 84px))}}
 .map-gis-collapsed{grid-template-columns:54px minmax(0,1fr)}
 @media(max-width:700px){.gis-sidebar-closed{display:none}.gis-sidebar:not(.gis-sidebar-closed) .map-panel-toggle{display:none}.gis-mobile-toggle{left:10px}.gis-sidebar-closed~.gis-mobile-toggle{left:10px}.gis-sidebar:not(.gis-sidebar-closed)~.gis-mobile-toggle{left:min(268px,calc(100% - 84px))}}
+
+/* Interface refinements: focus, actionable metrics and compact report controls. */
+.stat-card-link{display:block;color:inherit;transition:transform .16s ease,box-shadow .16s ease}.stat-card-link:hover{transform:translateY(-2px);box-shadow:0 8px 20px #0f172a12}.stat-card-link:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+.report-controls{display:flex;gap:8px;flex-wrap:wrap}.report-controls label{display:grid;gap:4px;color:#475569;font-size:10px}.report-controls select{height:34px;min-width:135px;padding:0 9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-size:11px}
+.table-footer{align-items:center;gap:12px;flex-wrap:wrap}.pagination{display:flex;align-items:center;gap:8px}.pagination button{min-height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-size:11px}.pagination button:disabled{opacity:.48;cursor:not-allowed}.pagination span{white-space:nowrap;color:#334155}
+.badge{border:1px solid currentColor;font-weight:650}.urgency-normal{color:#854d0e}.urgency-high{color:#9a3412}.status-new{color:#1d4ed8}.status-in_progress{color:#6d28d9}.status-resolved{color:#166534}.status-transferred{color:#075985}.status-rejected{color:#991b1b}
+.chart-empty{min-height:180px;display:grid;place-items:center;padding:20px;text-align:center;border:1px dashed #cbd5e1;border-radius:9px;background:#f8fafc;color:#334155;font-size:12px}
+@media(max-width:700px){.report-controls{display:grid;grid-template-columns:1fr 1fr}.report-controls select{min-width:0;width:100%}.table-footer{align-items:flex-start}.pagination{width:100%;justify-content:space-between}.tabs{padding-bottom:4px}.tabs button{min-height:38px}}

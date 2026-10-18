@@ -1,40 +1,22 @@
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '')
-
-export async function apiRequest(path, options = {}) {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
-  const payload = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const validationMessage = Object.values(payload?.errors ?? {}).flat()[0]
-    const error = new Error(validationMessage || payload?.message || 'La requête a échoué.')
-    error.status = response.status
-    throw error
-  }
-
-  return payload
-}
+import { apiRequest } from '../../api'
 
 const apiTransport = {
-  list() {
-    return apiRequest('/reports')
+  async list(filters = {}) {
+    const query = new URLSearchParams(filters)
+    const payload = await apiRequest(`/staff/reports${query.size ? `?${query}` : ''}`)
+    return payload.data ?? payload
   },
   async get(id) {
     try {
-      return await apiRequest(`/reports/${encodeURIComponent(id)}`)
+      const payload = await apiRequest(`/staff/reports/${encodeURIComponent(id)}`)
+      return payload.data ?? payload
     } catch (error) {
       if (error.status === 404) return null
       throw error
     }
   },
   update(id, changes) {
-    return apiRequest(`/reports/${encodeURIComponent(id)}`, {
+    return apiRequest(`/staff/reports/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
       body: JSON.stringify(changes),
     })
@@ -50,9 +32,12 @@ export function createReportService(transport) {
   }
 
   return {
-    list: () => transport.list(),
+    list: (filters) => transport.list(filters),
     get: (id) => transport.get(String(id)),
     update: (id, changes) => transport.update(String(id), changes),
+    setUrgency: (id, changes) => apiRequest(`/staff/reports/${encodeURIComponent(id)}/urgency`, { method: 'PATCH', body: JSON.stringify(changes) }),
+    assign: (id, changes) => apiRequest(`/staff/reports/${encodeURIComponent(id)}/assignments`, { method: 'POST', body: JSON.stringify(changes) }),
+    addNote: (id, note) => apiRequest(`/staff/reports/${encodeURIComponent(id)}/notes`, { method: 'POST', body: JSON.stringify({ note }) }),
     subscribe: (listener) => transport.subscribe?.(listener) ?? (() => {}),
   }
 }

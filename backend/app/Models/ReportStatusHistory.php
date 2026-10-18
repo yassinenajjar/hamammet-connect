@@ -16,6 +16,7 @@ class ReportStatusHistory extends Model
         'occurred_at',
         'rejection_reason',
         'note',
+        'author_id',
     ];
 
     protected function casts(): array
@@ -26,5 +27,10 @@ class ReportStatusHistory extends Model
     public function report(): BelongsTo
     {
         return $this->belongsTo(Report::class);
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'author_id');
     }
 }

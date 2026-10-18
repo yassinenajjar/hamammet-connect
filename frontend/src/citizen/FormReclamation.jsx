@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import LocationPicker from "./LocationPicker.jsx";
 
 const MAX_FICHIERS = 5;
-const MAX_TAILLE = 50 * 1024 * 1024;
+const MAX_TAILLE = 20 * 1024 * 1024;
 
 function FormReclamation({ onSubmit, message, utilisateur }) {
   const [titre, setTitre] = useState("");
   const [categorie, setCategorie] = useState("Propreté");
   const [lieu, setLieu] = useState("");
+  const [point, setPoint] = useState(null);
   const [description, setDescription] = useState("");
   const [fichiers, setFichiers] = useState([]);
   const [audioBlob, setAudioBlob] = useState(null);
@@ -56,7 +58,7 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
       }
 
       if (fichier.size > MAX_TAILLE) {
-        setErreur(`${fichier.name} dépasse la limite de 50 Mo.`);
+        setErreur(`${fichier.name} dépasse la limite de 20 Mo.`);
         continue;
       }
 
@@ -135,7 +137,7 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
         fluxRef.current = null;
 
         if (blob.size > MAX_TAILLE) {
-          setErreur("L'enregistrement dépasse 50 Mo.");
+          setErreur("L'enregistrement dépasse 20 Mo.");
         } else if (blob.size > 0) {
           setAudioBlob(blob);
           setAudioUrl(URL.createObjectURL(blob));
@@ -169,12 +171,12 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
     setAudioBlob(null);
   }
 
-  function envoyer(e) {
+  async function envoyer(e) {
     e.preventDefault();
     setErreur("");
 
-    if (!titre.trim() || !lieu.trim()) {
-      setErreur("Le titre et le lieu sont obligatoires.");
+    if (!titre.trim() || (!lieu.trim() && !point)) {
+      setErreur("Le titre et une adresse ou un point sur la carte sont obligatoires.");
       return;
     }
 
@@ -193,21 +195,23 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
     setEnvoi(true);
 
     try {
-      onSubmit({
+      const result = await onSubmit({
         titre: titre.trim(),
         categorie,
         lieu: lieu.trim(),
+        latitude: point?.[0] ?? null,
+        longitude: point?.[1] ?? null,
         description: description.trim(),
-        fichiers: fichiers.map((f) => ({
-          ...f,
-        })),
+        fichiers: fichiers.map((f) => f.fichier),
         audioBlob,
-        audioUrl,
       });
+
+      if (result?.error) throw new Error(result.error);
 
       setTitre("");
       setCategorie("Propreté");
       setLieu("");
+      setPoint(null);
       setDescription("");
       setFichiers([]);
       setAudioBlob(null);
@@ -217,8 +221,8 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
       if (galerieRef.current) galerieRef.current.value = "";
       if (cameraRef.current) cameraRef.current.value = "";
       if (videoRef.current) videoRef.current.value = "";
-    } catch {
-      setErreur("Une erreur est survenue. Réessaie.");
+    } catch (error) {
+      setErreur(error.message || "Une erreur est survenue. Réessaie.");
     } finally {
       setEnvoi(false);
     }
@@ -239,12 +243,15 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
       </div>
 
       {message && (
-        <p className="hc-message hc-notice" role="status">
-          {message}
-        </p>
+        <div className="hc-message hc-notice hc-confirmation" role="status" aria-live="polite">
+          <strong>Signalement envoyé</strong>
+          <p>Référence : <b>{message.reference}</b> · Statut : <b>{{ new: "Nouveau", in_progress: "En cours", transferred: "Transmis", resolved: "Résolu", rejected: "Rejeté" }[message.status] || message.status}</b></p>
+          {message.trackingSecret ? <><p>Conserve ce code secret pour consulter le suivi de ton signalement.</p><code>{message.trackingSecret}</code><a href="#suivi-anonyme">Accéder au suivi</a></> : <p>Tu retrouveras son suivi dans ton espace personnel.</p>}
+        </div>
       )}
 
       <form className="hc-form" onSubmit={envoyer}>
+        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }} />
         <div className="hc-field">
           <label htmlFor="reclamation-titre">
             Titre du signalement *
@@ -284,7 +291,7 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
 
           <div className="hc-field">
             <label htmlFor="reclamation-lieu">
-              Lieu précis *
+              Adresse (facultative si tu places le point)
             </label>
 
             <input
@@ -293,9 +300,15 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
               onChange={(e) => setLieu(e.target.value)}
               placeholder="Rue, quartier, repère..."
               maxLength={200}
-              required
             />
           </div>
+        </div>
+
+        <div className="hc-field">
+          <span className="hc-label">Point sur la carte</span>
+          <p className="hc-muted">Clique sur la carte pour indiquer l’emplacement. L’adresse, le point ou les deux sont acceptés.</p>
+          <LocationPicker value={point} onChange={setPoint} />
+          {point && <small>{point[0].toFixed(5)}, {point[1].toFixed(5)} <button type="button" onClick={() => setPoint(null)}>Retirer le point</button></small>}
         </div>
 
         <div className="hc-field">
@@ -321,7 +334,7 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
           <span className="hc-label">Photo ou vidéo</span>
 
           <p className="hc-muted">
-            Galerie, caméra ou vidéo. Maximum 5 fichiers, 50 Mo par fichier.
+            Galerie, caméra ou vidéo. Maximum 5 fichiers, 20 Mo par fichier.
           </p>
 
           <div className="hc-media-picker">

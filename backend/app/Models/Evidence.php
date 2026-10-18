@@ -16,6 +16,7 @@ class Evidence extends Model
         'original_name',
         'mime_type',
         'size',
+        'uploaded_by',
     ];
 
     protected function casts(): array
@@ -26,5 +27,10 @@ class Evidence extends Model
     public function report(): BelongsTo
     {
         return $this->belongsTo(Report::class);
+    }
+
+    public function uploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uploaded_by');
     }
 }

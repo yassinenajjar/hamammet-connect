@@ -1,119 +1,65 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiRequest } from "../api";
 import Visiteur from "./Visiteur.jsx";
 import Auth from "./Auth.jsx";
 import EspaceUtilisateur from "./EspaceUtilisateur.jsx";
-import EspaceMunicipalite from "./EspaceMunicipalite.jsx";
 
 function App() {
   const [page, setPage] = useState("visiteur");
   const [utilisateur, setUtilisateur] = useState(null);
-  const [comptes, setComptes] = useState([]);
-  const [reclamations, setReclamations] = useState([]);
   const [idees, setIdees] = useState([]);
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  function inscrire(donnees) {
-    const existe = comptes.some(
-      (compte) => compte.email === donnees.email
-    );
+  useEffect(() => {
+    if (!sessionStorage.getItem("hc_api_token")) return;
+    apiRequest("/user").then(({ data }) => {
+      setUtilisateur({ nom: data.name, email: data.email, role: data.role === "citizen" ? "citoyen" : data.role });
+    }).catch(() => sessionStorage.removeItem("hc_api_token"));
+  }, []);
 
-    if (existe) {
-      return "Cette adresse e-mail possède déjà un compte.";
-    }
-
-    setComptes((anciens) => [...anciens, donnees]);
-
-    setUtilisateur({
-      nom: donnees.nom,
-      email: donnees.email,
-      role: "citoyen",
-    });
-
+  async function inscrire(donnees) {
+    const payload = await apiRequest("/register", { method: "POST", body: JSON.stringify({ name: donnees.nom, email: donnees.email, password: donnees.motDePasse }) });
+    sessionStorage.setItem("hc_api_token", payload.token);
+    setUtilisateur({ nom: payload.data.name, email: payload.data.email, role: "citoyen" });
     setMessage("");
     setPage("utilisateur");
-    return null;
   }
 
-  function connecter(donnees) {
-    // Identifiants temporaires de démonstration uniquement.
-    // À remplacer par l'authentification du backend.
-    if (
-      donnees.email === "admin@hammamet.tn" &&
-      donnees.motDePasse === "admin123"
-    ) {
-      setUtilisateur({
-        nom: "Administration",
-        email: donnees.email,
-        role: "admin",
-      });
-
-      setMessage("");
-      setPage("municipalite");
-      return null;
+  async function connecter(donnees) {
+    const payload = await apiRequest("/login", { method: "POST", body: JSON.stringify({ email: donnees.email, password: donnees.motDePasse }) });
+    sessionStorage.setItem("hc_api_token", payload.token);
+    if (["staff", "admin"].includes(payload.data.role)) {
+      navigate("/dashboard");
+      return;
     }
-
-    const compte = comptes.find(
-      (c) =>
-        c.email === donnees.email &&
-        c.motDePasse === donnees.motDePasse
-    );
-
-    if (!compte) {
-      return "Identifiants incorrects. Vérifie ton e-mail et ton mot de passe.";
-    }
-
-    setUtilisateur({
-      nom: compte.nom,
-      email: compte.email,
-      role: "citoyen",
-    });
-
+    setUtilisateur({ nom: payload.data.name, email: payload.data.email, role: "citoyen" });
     setMessage("");
     setPage("utilisateur");
-    return null;
   }
 
-  function deconnexion() {
+  async function deconnexion() {
+    try { await apiRequest("/logout", { method: "POST" }); } catch { /* Clear the local session even when offline. */ }
+    sessionStorage.removeItem("hc_api_token");
     setUtilisateur(null);
     setMessage("");
     setPage("visiteur");
   }
 
-  function deposerReclamation(donnees) {
-    const nouvelleReclamation = {
-      ...donnees,
-      id: crypto.randomUUID(),
-      nomAuteur: utilisateur?.nom || "Visiteur",
-      emailAuteur:
-        utilisateur?.role === "citoyen"
-          ? utilisateur.email
-          : null,
-      statut: "Reçue",
-      motifRefus: "",
-      noteMunicipalite: "",
-      date: new Date().toLocaleDateString("fr-TN"),
-    };
-
-    setReclamations((anciennes) => [
-      nouvelleReclamation,
-      ...anciennes,
-    ]);
-
-    setMessage("Ta réclamation a bien été enregistrée.");
-  }
-
-  function supprimerReclamation(id) {
-    if (utilisateur?.role !== "citoyen") return;
-
-    setReclamations((anciennes) =>
-      anciennes.filter(
-        (r) =>
-          !(
-            r.id === id &&
-            r.emailAuteur === utilisateur.email
-          )
-      )
-    );
+  async function deposerReclamation(donnees) {
+    const body = new FormData();
+    body.append("title", donnees.titre);
+    body.append("category", donnees.categorie);
+    body.append("description", donnees.description || (donnees.audioBlob ? "Message vocal joint." : ""));
+    if (donnees.lieu) body.append("location", donnees.lieu);
+    if (donnees.latitude !== null) body.append("latitude", String(donnees.latitude));
+    if (donnees.longitude !== null) body.append("longitude", String(donnees.longitude));
+    donnees.fichiers.forEach((file) => body.append("evidence[]", file));
+    if (donnees.audioBlob) body.append("evidence[]", donnees.audioBlob, "message-vocal.webm");
+    const result = await apiRequest("/reports", { method: "POST", body });
+    setMessage({ reference: result.data.reference, status: result.data.status || "new", trackingSecret: result.data.tracking_secret || "" });
+    return result;
   }
 
   function ajouterIdee(donnees) {
@@ -173,14 +119,17 @@ function App() {
             </button>
           )}
 
-          {utilisateur?.role === "admin" && (
-            <button
-              className={page === "municipalite" ? "active" : ""}
-              onClick={() => setPage("municipalite")}
-            >
-              Espace municipalité
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (["admin", "staff"].includes(utilisateur?.role)) navigate("/dashboard");
+              else {
+                setMessage("");
+                setPage("connexion");
+              }
+            }}
+          >
+            Espace municipalité
+          </button>
         </nav>
 
         <div className="hc-header-actions">
@@ -260,24 +209,11 @@ function App() {
         utilisateur?.role === "citoyen" && (
           <EspaceUtilisateur
             user={utilisateur}
-            reclamations={reclamations.filter(
-              (r) => r.emailAuteur === utilisateur.email
-            )}
-            supprimerReclamation={supprimerReclamation}
             idees={idees.filter(
               (i) => i.emailAuteur === utilisateur.email
             )}
             ajouterIdee={ajouterIdee}
             allerAccueil={() => setPage("visiteur")}
-          />
-        )}
-
-      {page === "municipalite" &&
-        utilisateur?.role === "admin" && (
-          <EspaceMunicipalite
-            reclamations={reclamations}
-            setReclamations={setReclamations}
-            retour={deconnexion}
           />
         )}
 
