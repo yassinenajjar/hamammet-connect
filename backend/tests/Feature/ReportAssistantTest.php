@@ -83,7 +83,7 @@ class ReportAssistantTest extends TestCase
         Http::assertSent(function (Request $request): bool {
             $body = json_encode($request->data(), JSON_UNESCAPED_UNICODE) ?: '';
 
-            return str_contains($request->url(), 'gemini-3.8-flash:generateContent')
+            return str_contains($request->url(), 'gemini-3.1-flash-lite:generateContent')
                 && str_contains($body, 'There is a problem near the school.')
                 && str_contains($body, 'يوجد مصباح لا يعمل أمام المدرسة')
                 && str_contains($body, 'français, en arabe standard, en arabe tunisien');

@@ -27,7 +27,7 @@ class ReportAssistantService
             throw new RuntimeException('Aucune catégorie active n’est configurée.');
         }
 
-        $model = (string) config('services.gemini.model', 'gemini-3.8-flash');
+        $model = (string) config('services.gemini.model', 'gemini-3.1-flash-lite');
         $endpoint = rtrim((string) config('services.gemini.endpoint'), '/').'/'.rawurlencode($model).':generateContent';
         $categoryList = implode("\n- ", $categories);
         $userText = implode("\n", array_map(
