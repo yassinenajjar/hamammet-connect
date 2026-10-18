@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateReportRequest;
 use App\Http\Resources\ReportResource;
 use App\Models\MunicipalService;
 use App\Models\Category;
+use App\Models\Evidence;
 use App\Models\Report;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\CloudinaryEvidenceService;
+use RuntimeException;
 
 class ReportController extends Controller
 {
@@ -45,9 +48,30 @@ class ReportController extends Controller
         return response()->json(ReportResource::make($report)->resolve());
     }
 
-    public function create(StoreReportRequest $request): JsonResponse
+    public function create(StoreReportRequest $request, CloudinaryEvidenceService $cloudinary): JsonResponse
     {
         $validated = $request->validated();
+        try {
+            $verifiedEvidence = array_map(function (array $upload) use ($cloudinary): array {
+                $evidence = $cloudinary->verifyTicketAndAsset($upload['ticket']);
+                if (Evidence::query()->where('storage_disk', 'cloudinary')->where('storage_path', $evidence['storage_path'])->exists()) {
+                    throw new RuntimeException('Ce fichier a déjà été associé à un signalement. Réimporte-le pour continuer.');
+                }
+
+                return $evidence;
+            }, $validated['evidence'] ?? []);
+            if (count(array_unique(array_column($verifiedEvidence, 'storage_path'))) !== count($verifiedEvidence)) {
+                throw new RuntimeException('Le même fichier ne peut pas être joint plusieurs fois au signalement.');
+            }
+        } catch (RuntimeException $exception) {
+            $retryable = str_contains($exception->getMessage(), 'Cloudinary ne répond')
+                || str_contains($exception->getMessage(), 'Cloudinary n’a pas pu')
+                || str_contains($exception->getMessage(), 'n’est pas configuré')
+                || str_contains($exception->getMessage(), 'n’est pas configurée');
+
+            return response()->json(['message' => $exception->getMessage()], $retryable ? 503 : 422);
+        }
+
         $user = Auth::guard('sanctum')->user();
         $trackingSecret = $user ? null : Str::random(64);
         $category = trim($validated['category']);
@@ -56,7 +80,7 @@ class ReportController extends Controller
             ? MunicipalService::query()->find($reportCategory->municipal_service_id)
             : null;
 
-        $report = DB::transaction(function () use ($validated, $user, $trackingSecret, $category, $reportCategory, $service): Report {
+        $report = DB::transaction(function () use ($validated, $verifiedEvidence, $user, $trackingSecret, $category, $reportCategory, $service): Report {
             $report = Report::query()->create([
                 'reference' => $this->newReference(),
                 'reporter_id' => $user?->id,
@@ -82,15 +106,17 @@ class ReportController extends Controller
                 'note' => 'Signalement enregistré.',
             ]);
 
-            foreach ($validated['evidence'] ?? [] as $file) {
-                $path = $file->store('reports/'.$report->id, 'local');
+            foreach ($verifiedEvidence as $file) {
                 $report->evidence()->create([
                     'uploaded_by' => $user?->id,
-                    'storage_disk' => 'local',
-                    'storage_path' => $path,
-                    'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
+                    'storage_disk' => 'cloudinary',
+                    'storage_path' => $file['storage_path'],
+                    'storage_resource_type' => $file['storage_resource_type'],
+                    'storage_format' => $file['storage_format'],
+                    'storage_version' => $file['storage_version'],
+                    'original_name' => $file['original_name'],
+                    'mime_type' => $file['mime_type'],
+                    'size' => $file['size'],
                 ]);
             }
 
@@ -222,6 +248,22 @@ class ReportController extends Controller
     public function evidence(Report $report, int $evidence): mixed
     {
         $item = $report->evidence()->findOrFail($evidence);
+
+        if ($item->storage_disk === 'cloudinary') {
+            if (! $item->storage_resource_type || ! $item->storage_format || ! $item->storage_version) {
+                abort(404);
+            }
+            try {
+                return redirect()->away(app(CloudinaryEvidenceService::class)->authenticatedDeliveryUrl(
+                    $item->storage_path,
+                    $item->storage_resource_type,
+                    $item->storage_format,
+                    $item->storage_version,
+                ));
+            } catch (RuntimeException) {
+                abort(404);
+            }
+        }
 
         return Storage::disk($item->storage_disk)->download($item->storage_path, $item->original_name);
     }

@@ -5,6 +5,7 @@ import LocationPicker from "./LocationPicker.jsx";
 
 const MAX_FICHIERS = 5;
 const MAX_TAILLE = 20 * 1024 * 1024;
+const TYPES_AUTORISES = new Set(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime", "video/webm"]);
 const LANGUES_VOCALES = [
   { code: "fr-FR", label: "Français" },
   { code: "ar-TN", label: "Arabe tunisien" },
@@ -39,7 +40,9 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
     ? window.SpeechRecognition || window.webkitSpeechRecognition
     : null;
 
-  fichiersRef.current = fichiers;
+  useEffect(() => {
+    fichiersRef.current = fichiers;
+  }, [fichiers]);
 
   useEffect(() => {
     return () => {
@@ -60,8 +63,8 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
     setErreur("");
     const valides = [];
     for (const fichier of selection) {
-      if (!fichier.type.startsWith("image/") && !fichier.type.startsWith("video/")) {
-        setErreur("Choisis uniquement des images ou des vidéos.");
+      if (!TYPES_AUTORISES.has(fichier.type)) {
+        setErreur("Format non accepté. Utilise une image JPG, PNG ou WEBP, ou une vidéo MP4, MOV ou WEBM.");
         continue;
       }
       if (fichier.size > MAX_TAILLE) {
@@ -315,7 +318,7 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
                   <button type="button" className="hc-attach-button" onClick={() => fichierInputRef.current?.click()} disabled={fichiers.length >= MAX_FICHIERS}>
                     <Paperclip size={15} aria-hidden="true" /> Joindre un fichier
                   </button>
-                  <input ref={fichierInputRef} type="file" accept="image/*,video/*" multiple className="hc-hidden-input" onChange={choisirFichiers} />
+                  <input ref={fichierInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple className="hc-hidden-input" onChange={choisirFichiers} />
                 </div>
                 <span className="hc-counter">{description.length}/1500</span>
                 <button type="button" className="hc-button hc-primary hc-send-message" onClick={envoyerMessage} disabled={!description.trim() || analyse}>

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiRequest } from "../api";
+import { apiRequest, uploadEvidenceToCloudinary } from "../api";
 import Visiteur from "./Visiteur.jsx";
 import Auth from "./Auth.jsx";
 import EspaceUtilisateur from "./EspaceUtilisateur.jsx";
@@ -10,6 +10,7 @@ function App() {
   const [utilisateur, setUtilisateur] = useState(null);
   const [idees, setIdees] = useState([]);
   const [message, setMessage] = useState("");
+  const uploadedEvidence = useRef(new WeakMap());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,18 +49,34 @@ function App() {
   }
 
   async function deposerReclamation(donnees) {
-    const body = new FormData();
-    body.append("title", donnees.titre);
-    body.append("category", donnees.categorie);
-    body.append("description", donnees.description || (donnees.audioBlob ? "Message vocal joint." : ""));
-    if (donnees.lieu) body.append("location", donnees.lieu);
-    if (donnees.latitude !== null) body.append("latitude", String(donnees.latitude));
-    if (donnees.longitude !== null) body.append("longitude", String(donnees.longitude));
-    donnees.fichiers.forEach((file) => body.append("evidence[]", file));
-    if (donnees.audioBlob) body.append("evidence[]", donnees.audioBlob, "message-vocal.webm");
-    const result = await apiRequest("/reports", { method: "POST", body });
-    setMessage({ reference: result.data.reference, status: result.data.status || "new", trackingSecret: result.data.tracking_secret || "" });
-    return result;
+    const evidence = await Promise.all(donnees.fichiers.map(async (file) => {
+      let uploaded = uploadedEvidence.current.get(file);
+      if (!uploaded) {
+        uploaded = await uploadEvidenceToCloudinary(file);
+        uploadedEvidence.current.set(file, uploaded);
+      }
+      return uploaded;
+    }));
+
+    const body = {
+      title: donnees.titre,
+      category: donnees.categorie,
+      description: donnees.description || "",
+      evidence,
+    };
+    if (donnees.lieu) body.location = donnees.lieu;
+    if (donnees.latitude !== null) body.latitude = donnees.latitude;
+    if (donnees.longitude !== null) body.longitude = donnees.longitude;
+
+    try {
+      const result = await apiRequest("/reports", { method: "POST", body: JSON.stringify(body) });
+      donnees.fichiers.forEach((file) => uploadedEvidence.current.delete(file));
+      setMessage({ reference: result.data.reference, status: result.data.status || "new", trackingSecret: result.data.tracking_secret || "" });
+      return result;
+    } catch (error) {
+      donnees.fichiers.forEach((file) => uploadedEvidence.current.delete(file));
+      throw error;
+    }
   }
 
   function ajouterIdee(donnees) {

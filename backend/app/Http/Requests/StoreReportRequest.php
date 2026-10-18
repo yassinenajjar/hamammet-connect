@@ -27,8 +27,9 @@ class StoreReportRequest extends FormRequest
             'reporter_id' => ['prohibited'],
             'importance' => ['prohibited'],
             'website' => ['prohibited'],
-            'evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,webm,mp3,wav,m4a', 'max:20480'],
             'evidence' => ['sometimes', 'array', 'max:5'],
+            'evidence.*' => ['array:ticket'],
+            'evidence.*.ticket' => ['required', 'string', 'max:4096'],
         ];
     }
 }

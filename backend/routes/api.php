@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\MunicipalServiceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EvidenceUploadController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReportAssistantController;
 use App\Models\Report;
@@ -23,6 +24,7 @@ Route::get('/categories', function () {
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/reports', [ReportController::class, 'create'])->middleware('throttle:8,1');
+Route::post('/evidence/uploads/signature', [EvidenceUploadController::class, 'signature'])->middleware('throttle:10,1');
 Route::post('/report-assistant/messages', [ReportAssistantController::class, 'respond'])->middleware('throttle:10,1');
 Route::post('/anonymous/reports/{report}/access', [ReportController::class, 'track'])->middleware('throttle:10,1');
 Route::get('/reports/{report}/evidence/{evidence}', [ReportController::class, 'evidence'])->middleware('signed')->name('reports.evidence');

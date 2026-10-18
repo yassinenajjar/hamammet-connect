@@ -13,6 +13,9 @@ class Evidence extends Model
     protected $fillable = [
         'storage_disk',
         'storage_path',
+        'storage_resource_type',
+        'storage_format',
+        'storage_version',
         'original_name',
         'mime_type',
         'size',
@@ -21,7 +24,7 @@ class Evidence extends Model
 
     protected function casts(): array
     {
-        return ['size' => 'integer'];
+        return ['size' => 'integer', 'storage_version' => 'integer'];
     }
 
     public function report(): BelongsTo

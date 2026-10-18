@@ -12,7 +12,9 @@ RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/fra
     && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader \
     && chown -R www-data:www-data storage bootstrap/cache
 
-ENV SERVER_NAME=:80
 ENV SERVER_ROOT=public
 
-CMD ["php-server", "-r", "public/"]
+COPY docker/start-vercel.sh /usr/local/bin/start-vercel
+RUN chmod +x /usr/local/bin/start-vercel
+
+CMD ["/usr/local/bin/start-vercel"]

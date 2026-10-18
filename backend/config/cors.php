@@ -25,7 +25,11 @@ return [
         'http://127.0.0.1:5173',
     ])),
 
-    'allowed_origins_patterns' => [],
+    // Vite increments its port when the default is already occupied. Keep the
+    // development allowance restricted to loopback origins and local app envs.
+    'allowed_origins_patterns' => env('APP_ENV', 'production') === 'local'
+        ? ['#^http://(localhost|127\\.0\\.0\\.1):517[0-9]+$#']
+        : [],
 
     'allowed_headers' => ['*'],
 
