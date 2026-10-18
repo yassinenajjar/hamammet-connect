@@ -4,20 +4,30 @@ import { apiRequest, uploadEvidenceToCloudinary } from "../api";
 import Visiteur from "./Visiteur.jsx";
 import Auth from "./Auth.jsx";
 import EspaceUtilisateur from "./EspaceUtilisateur.jsx";
+import CitizenIdeaForm from "./CitizenIdeaForm.jsx";
 
 function App() {
   const [page, setPage] = useState("visiteur");
   const [utilisateur, setUtilisateur] = useState(null);
-  const [idees, setIdees] = useState([]);
+  const [authLoading, setAuthLoading] = useState(() => Boolean(sessionStorage.getItem("hc_api_token")));
   const [message, setMessage] = useState("");
   const uploadedEvidence = useRef(new WeakMap());
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("hc_api_token")) return;
+    if (!sessionStorage.getItem("hc_api_token")) {
+      setAuthLoading(false);
+      return;
+    }
+    let active = true;
     apiRequest("/user").then(({ data }) => {
-      setUtilisateur({ nom: data.name, email: data.email, role: data.role === "citizen" ? "citoyen" : data.role });
-    }).catch(() => sessionStorage.removeItem("hc_api_token"));
+      if (active) setUtilisateur({ nom: data.name, email: data.email, role: data.role === "citizen" ? "citoyen" : data.role });
+    }).catch(() => {
+      sessionStorage.removeItem("hc_api_token");
+    }).finally(() => {
+      if (active) setAuthLoading(false);
+    });
+    return () => { active = false; };
   }, []);
 
   async function inscrire(donnees) {
@@ -71,7 +81,7 @@ function App() {
     try {
       const result = await apiRequest("/reports", { method: "POST", body: JSON.stringify(body) });
       donnees.fichiers.forEach((file) => uploadedEvidence.current.delete(file));
-      setMessage({ reference: result.data.reference, status: result.data.status || "new", trackingSecret: result.data.tracking_secret || "" });
+      setMessage({ reference: result.data.reference, status: result.data.status || "new" });
       return result;
     } catch (error) {
       donnees.fichiers.forEach((file) => uploadedEvidence.current.delete(file));
@@ -79,23 +89,9 @@ function App() {
     }
   }
 
-  function ajouterIdee(donnees) {
-    if (utilisateur?.role !== "citoyen") {
-      return "Connecte-toi pour proposer une idée.";
-    }
-
-    setIdees((anciennes) => [
-      {
-        ...donnees,
-        id: crypto.randomUUID(),
-        nomAuteur: utilisateur.nom,
-        emailAuteur: utilisateur.email,
-        date: new Date().toLocaleDateString("fr-TN"),
-      },
-      ...anciennes,
-    ]);
-
-    return null;
+  async function soumettreIdee(donnees) {
+    await apiRequest("/ideas", { method: "POST", body: JSON.stringify(donnees) });
+    setPage("utilisateur");
   }
 
   return (
@@ -150,7 +146,9 @@ function App() {
         </nav>
 
         <div className="hc-header-actions">
-          {!utilisateur ? (
+          {authLoading ? (
+            <span className="hc-muted" role="status">Vérification de la session…</span>
+          ) : !utilisateur ? (
             <>
               <button
                 className="hc-button hc-outline"
@@ -203,8 +201,12 @@ function App() {
           allerEspace={() => setPage("utilisateur")}
           message={message}
           utilisateur={utilisateur}
+          authLoading={authLoading}
+          allerIdee={() => setPage(utilisateur?.role === "citoyen" ? "idee" : "connexion")}
         />
       )}
+
+      {page === "idee" && utilisateur?.role === "citoyen" && <CitizenIdeaForm onSubmit={soumettreIdee} onBack={() => setPage("visiteur")} />}
 
       {(page === "connexion" || page === "inscription") && (
         <Auth
@@ -226,10 +228,7 @@ function App() {
         utilisateur?.role === "citoyen" && (
           <EspaceUtilisateur
             user={utilisateur}
-            idees={idees.filter(
-              (i) => i.emailAuteur === utilisateur.email
-            )}
-            ajouterIdee={ajouterIdee}
+            allerIdee={() => setPage("idee")}
             allerAccueil={() => setPage("visiteur")}
           />
         )}

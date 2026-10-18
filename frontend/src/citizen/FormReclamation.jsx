@@ -263,7 +263,7 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
         <div className="hc-message hc-notice hc-confirmation" role="status" aria-live="polite">
           <strong>Signalement envoyé</strong>
           <p>Référence : <b>{message.reference}</b> · Statut : <b>{statutLabels[message.status] || message.status}</b></p>
-          {message.trackingSecret ? <><p>Conserve ce code secret pour consulter le suivi.</p><code>{message.trackingSecret}</code><a href="#suivi-anonyme">Accéder au suivi</a></> : <p>Tu retrouveras son suivi dans ton espace personnel.</p>}
+          {utilisateur ? <p>Tu retrouveras son suivi dans ton espace personnel.</p> : <><p>Garde cette référence pour consulter le suivi de ton signalement.</p><a href="#suivi-anonyme">Consulter le suivi</a></>}
         </div>
       )}
 
@@ -389,7 +389,7 @@ function FormReclamation({ onSubmit, message, utilisateur }) {
         {erreur && <p className="hc-message hc-error" role="alert">{erreur}</p>}
 
         <div className="hc-submit-row">
-          <p>{utilisateur?.role === "citoyen" ? "Ton signalement sera associé à ton compte." : "Tu peux signaler un problème sans compte. Un code secret permettra le suivi."}</p>
+          <p>{utilisateur?.role === "citoyen" ? "Ton signalement sera associé à ton compte." : "Tu peux signaler un problème sans compte. Garde la référence pour consulter le suivi."}</p>
           {prepared ? (
             <button type="button" className="hc-button hc-primary" onClick={confirmerSignalement} disabled={envoi || analyse}>
               {envoi ? "Enregistrement…" : "Confirmer le signalement →"}

@@ -73,18 +73,17 @@ class ReportController extends Controller
         }
 
         $user = Auth::guard('sanctum')->user();
-        $trackingSecret = $user ? null : Str::random(64);
         $category = trim($validated['category']);
         $reportCategory = Category::query()->where('name', $category)->firstOrFail();
         $service = $reportCategory->municipal_service_id
             ? MunicipalService::query()->find($reportCategory->municipal_service_id)
             : null;
 
-        $report = DB::transaction(function () use ($validated, $verifiedEvidence, $user, $trackingSecret, $category, $reportCategory, $service): Report {
+        $report = DB::transaction(function () use ($validated, $verifiedEvidence, $user, $category, $reportCategory, $service): Report {
             $report = Report::query()->create([
                 'reference' => $this->newReference(),
                 'reporter_id' => $user?->id,
-                'tracking_secret_hash' => $trackingSecret ? hash('sha256', $trackingSecret) : null,
+                'tracking_secret_hash' => null,
                 'title' => trim($validated['title']),
                 'description' => trim($validated['description']),
                 'category' => $category,
@@ -128,7 +127,6 @@ class ReportController extends Controller
                 'reference' => $report->reference,
                 'status' => $report->status,
                 'submitted_at' => $report->submitted_at->toIso8601String(),
-                'tracking_secret' => $trackingSecret,
             ],
         ], 201);
     }
@@ -152,10 +150,18 @@ class ReportController extends Controller
 
     public function track(Request $request, Report $report): JsonResponse
     {
-        $request->validate(['tracking_secret' => ['required', 'string', 'max:128']]);
-        abort_if($report->reporter_id !== null || ! $report->tracking_secret_hash || ! hash_equals($report->tracking_secret_hash, hash('sha256', $request->input('tracking_secret'))), 404);
+        $rejectionReason = $report->status === 'rejected'
+            ? $report->history()->where('to_status', 'rejected')->latest('occurred_at')->value('rejection_reason')
+            : null;
 
-        return response()->json(['data' => $this->citizenReport($report)]);
+        return response()->json([
+            'data' => [
+                'reference' => $report->reference,
+                'status' => $report->status,
+                'submitted_at' => $report->submitted_at->toIso8601String(),
+                'rejection_reason' => $rejectionReason,
+            ],
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     public function update(UpdateReportRequest $request, Report $report): JsonResponse
@@ -286,7 +292,7 @@ class ReportController extends Controller
     private function newReference(): string
     {
         do {
-            $reference = 'HC-'.now()->format('Y').'-'.strtoupper(Str::random(6));
+            $reference = 'HC-'.now()->format('Y').'-'.strtoupper(Str::random(12));
         } while (Report::query()->where('reference', $reference)->exists());
 
         return $reference;

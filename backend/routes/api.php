@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EvidenceUploadController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReportAssistantController;
+use App\Http\Controllers\Api\CitizenIdeaController;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\Category;
@@ -34,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/my/reports', [ReportController::class, 'mine']);
     Route::get('/my/reports/{report}', [ReportController::class, 'mineShow']);
+    Route::get('/my/ideas', [CitizenIdeaController::class, 'mine']);
+    Route::post('/ideas', [CitizenIdeaController::class, 'store'])->middleware('throttle:5,1');
 });
 
 Route::prefix('staff')->middleware(['auth:sanctum', 'can:staff-access'])->group(function (): void {
@@ -43,6 +46,8 @@ Route::prefix('staff')->middleware(['auth:sanctum', 'can:staff-access'])->group(
     Route::patch('/reports/{report}/urgency', [ReportController::class, 'setUrgency']);
     Route::post('/reports/{report}/assignments', [ReportController::class, 'assign']);
     Route::post('/reports/{report}/notes', [ReportController::class, 'addNote']);
+    Route::get('/ideas', [CitizenIdeaController::class, 'index']);
+    Route::patch('/ideas/{idea}', [CitizenIdeaController::class, 'review']);
     Route::get('/dashboard/statistics', function () {
         return response()->json([
             'total' => Report::query()->count(),

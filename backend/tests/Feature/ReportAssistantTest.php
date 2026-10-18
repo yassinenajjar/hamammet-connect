@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Report;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -214,14 +215,33 @@ class ReportAssistantTest extends TestCase
     {
         $category = Category::query()->where('active', true)->firstOrFail();
 
-        $this->postJson('/api/reports', [
+        $response = $this->postJson('/api/reports', [
             'title' => 'Éclairage public défectueux',
             'description' => 'Un lampadaire ne fonctionne plus près de la rue principale.',
             'category' => $category->name,
             'location' => 'Rue de la Corniche',
-        ])->assertCreated()->assertJsonPath('data.status', 'new')->assertJsonStructure(['data' => ['reference', 'tracking_secret']]);
+        ])->assertCreated()->assertJsonPath('data.status', 'new')->assertJsonMissingPath('data.tracking_secret');
 
         $this->assertDatabaseHas('reports', ['title' => 'Éclairage public défectueux', 'reporter_id' => null]);
+
+        $reference = $response->json('data.reference');
+        $this->postJson('/api/anonymous/reports/'.$reference.'/access', [])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'new')
+            ->assertJsonMissingPath('data.title');
+
+        $staff = User::factory()->create(['role' => 'staff']);
+        $this->actingAs($staff, 'sanctum')->patchJson('/api/staff/reports/'.$reference.'/status', [
+            'status' => 'rejected',
+            'rejection_reason' => 'Le lieu indiqué ne se trouve pas dans la commune.',
+            'staff_note' => 'Note interne qui ne doit pas être publique.',
+        ])->assertOk();
+
+        $this->postJson('/api/anonymous/reports/'.$reference.'/access', [])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('data.rejection_reason', 'Le lieu indiqué ne se trouve pas dans la commune.')
+            ->assertJsonMissing(['note' => 'Note interne qui ne doit pas être publique.']);
     }
 
     public function test_existing_report_validation_rejects_a_category_outside_active_database_categories(): void

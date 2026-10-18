@@ -37,6 +37,11 @@ class User extends Authenticatable
         return $this->hasMany(Report::class, 'reporter_id');
     }
 
+    public function ideas(): HasMany
+    {
+        return $this->hasMany(CitizenIdea::class);
+    }
+
     public function isStaff(): bool
     {
         return in_array($this->role, ['staff', 'admin'], true);

@@ -786,6 +786,92 @@
   color: #b4233c;
 }
 
+.hc-page-actions,
+.hc-idea-actions,
+.hc-ideas-heading,
+.hc-idea-item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hc-idea-form-panel,
+.hc-ideas-list {
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.hc-idea-form {
+  display: grid;
+  gap: 18px;
+}
+
+.hc-idea-form textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #dbe3f1;
+  border-radius: 12px;
+  padding: 13px 15px;
+  color: #172033;
+  font: inherit;
+}
+
+.hc-idea-actions {
+  justify-content: flex-end;
+}
+
+.hc-ideas-heading h2,
+.hc-idea-item h3 {
+  margin: 0 0 5px;
+  color: #172033;
+}
+
+.hc-ideas-heading p,
+.hc-idea-item p {
+  margin-top: 6px;
+}
+
+.hc-idea-item {
+  border-top: 1px solid #e8edf5;
+  padding: 18px 0;
+}
+
+.hc-idea-status {
+  border-radius: 20px;
+  padding: 5px 10px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.hc-idea-status-accepted { background: #ecfdf5; color: #047857; }
+.hc-idea-status-rejected { background: #fff1f2; color: #be123c; }
+
+.hc-idea-response {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 3px solid #6366f1;
+  border-radius: 7px;
+  background: #f5f3ff;
+}
+
+.hc-idea-response p { margin-bottom: 0; }
+
+@media (max-width: 640px) {
+  .hc-page-actions,
+  .hc-ideas-heading,
+  .hc-idea-item-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .hc-idea-form-panel,
+  .hc-ideas-list { padding: 18px; }
+  .hc-idea-actions { justify-content: stretch; }
+  .hc-idea-actions > button { flex: 1; }
+}
+
 .hc-report-media img,
 .hc-report-media video {
   width: 100%;

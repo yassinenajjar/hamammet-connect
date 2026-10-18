@@ -1,14 +1,32 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Activity, ArrowRight, ArrowUpRight, Building2, Check, Clock3, MoreHorizontal, Search, Siren, TrendingUp, Users, Image as ImageIcon, FileClock } from 'lucide-react'
+import { Activity, ArrowRight, ArrowUpRight, Building2, Check, Clock3, MoreHorizontal, Search, Siren, TrendingUp, Users, Image as ImageIcon, FileClock, Lightbulb, CheckCircle2, XCircle } from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import IssueMap from '../components/IssueMap'
 import { statusLabels, urgencyLabels } from '../data/reportOptions'
 import { useReports } from '../hooks/useReports'
 import { useServices } from '../hooks/useServices'
 import { reportService } from '../services/reportService'
+import { apiRequest } from '../../api'
 
 const metricIcons = { reports: ClipboardIcon, critical: Siren, progress: Clock3, resolved: Check, satisfaction: Users }
+const frenchCollator = new Intl.Collator('fr', { sensitivity: 'base', numeric: true })
+
+function compareReports(a, b, sort) {
+  const dateA = Date.parse(a.submitted_at || a.date) || 0
+  const dateB = Date.parse(b.submitted_at || b.date) || 0
+  const compareText = (left, right) => frenchCollator.compare(String(left ?? ''), String(right ?? ''))
+
+  switch (sort) {
+    case 'oldest': return dateA - dateB
+    case 'status_asc': return compareText(statusLabels[a.status] || a.status, statusLabels[b.status] || b.status)
+    case 'status_desc': return compareText(statusLabels[b.status] || b.status, statusLabels[a.status] || a.status)
+    case 'category_asc': return compareText(a.category, b.category)
+    case 'category_desc': return compareText(b.category, a.category)
+    case 'title': return compareText(a.title, b.title)
+    default: return dateB - dateA
+  }
+}
 
 function Badge({ children, kind = 'neutral' }) { return <span className={`badge ${kind}`}>{children}</span> }
 function SectionTitle({ title, sub, action, to = '/reports' }) { return <div className="section-title"><div><h2>{title}</h2>{sub && <p>{sub}</p>}</div>{action && <Link className="text-link" to={to}>{action}<ArrowRight size={15} /></Link>}</div> }
@@ -54,7 +72,7 @@ export function ReportsPage() {
     const urgencyMatch = filter !== 'urgent' || report.urgency === 'critical' || report.urgency === 'high'
     const statusMatch = ['all', 'urgent'].includes(filter) || (filter === 'processing' ? ['in_progress', 'transferred'].includes(report.status) : report.status === filter)
     return urgencyMatch && statusMatch && (!category || report.category === category) && `${report.title} ${report.id} ${report.category} ${report.location}`.toLowerCase().includes(query.toLowerCase())
-  }).sort((a, b) => sort === 'oldest' ? new Date(a.submitted_at || a.date) - new Date(b.submitted_at || b.date) : sort === 'title' ? a.title.localeCompare(b.title, 'fr') : new Date(b.submitted_at || b.date) - new Date(a.submitted_at || a.date)), [reports, filter, query, category, sort])
+  }).sort((a, b) => compareReports(a, b, sort)), [reports, filter, query, category, sort])
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize))
   const pageRows = rows.slice((page - 1) * pageSize, page * pageSize)
   function selectFilter(next) {
@@ -67,7 +85,7 @@ export function ReportsPage() {
   }
   const tabs = [['all', 'Toutes'], ['urgent', 'Urgentes'], ['new', 'Nouvelles'], ['processing', 'En cours'], ['transferred', 'Transmises'], ['resolved', 'Résolues'], ['rejected', 'Rejetées']]
   const countFor = (key) => key === 'all' ? reports.length : key === 'urgent' ? reports.filter((report) => report.urgency === 'critical' || report.urgency === 'high').length : key === 'processing' ? reports.filter((report) => ['in_progress', 'transferred'].includes(report.status)).length : reports.filter((report) => report.status === key).length
-  return <><div className="page-intro"><p>Suivez et gérez l’ensemble des signalements reçus par la municipalité.</p></div><section className="panel reports-panel"><div className="reports-toolbar"><div className="tabs">{tabs.map(([key, label]) => <button key={key} className={filter === key ? 'selected' : ''} onClick={() => { selectFilter(key); setPage(1) }}>{label}<span>{countFor(key)}</span></button>)}</div><label className="table-search"><Search size={16} /><input value={query} onChange={(event) => { const next = new URLSearchParams(params); if (event.target.value) next.set('q', event.target.value); else next.delete('q'); setParams(next, { replace: true }); setPage(1) }} placeholder="Rechercher..." aria-label="Rechercher dans les réclamations" /></label><div className="report-controls"><label>Catégorie<select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1) }}><option value="">Toutes catégories</option>{[...new Set(reports.map(r => r.category))].map(c => <option key={c}>{c}</option>)}</select></label><label>Trier par<select value={sort} onChange={(e) => setSort(e.target.value)}><option value="recent">Plus récentes</option><option value="oldest">Plus anciennes</option><option value="title">Titre A à Z</option></select></label></div></div>{error ? <div className="empty-results">{error}</div> : loading ? <div className="empty-results">Chargement des réclamations…</div> : pageRows.length ? <ReportTable rows={pageRows} /> : <div className="empty-results">Aucune réclamation ne correspond à votre recherche. Modifiez les filtres ou la recherche.</div>}<div className="table-footer"><span>Affichage de <b>{rows.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, rows.length)}</b> sur <b>{rows.length}</b></span><div className="pagination"><button disabled={page <= 1} onClick={() => setPage(page - 1)}>Précédent</button><span>Page {page} sur {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage(page + 1)}>Suivant</button></div></div></section></>
+  return <><div className="page-intro"><p>Suivez et gérez l’ensemble des signalements reçus par la municipalité.</p></div><section className="panel reports-panel"><div className="reports-toolbar"><div className="tabs">{tabs.map(([key, label]) => <button key={key} className={filter === key ? 'selected' : ''} onClick={() => { selectFilter(key); setPage(1) }}>{label}<span>{countFor(key)}</span></button>)}</div><label className="table-search"><Search size={16} /><input value={query} onChange={(event) => { const next = new URLSearchParams(params); if (event.target.value) next.set('q', event.target.value); else next.delete('q'); setParams(next, { replace: true }); setPage(1) }} placeholder="Rechercher..." aria-label="Rechercher dans les réclamations" /></label><div className="report-controls"><label>Catégorie<select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1) }}><option value="">Toutes catégories</option>{[...new Set(reports.map(r => r.category))].map(c => <option key={c}>{c}</option>)}</select></label><label>Trier par<select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1) }}><option value="recent">Date : plus récentes</option><option value="oldest">Date : plus anciennes</option><option value="status_asc">Statut : A à Z</option><option value="status_desc">Statut : Z à A</option><option value="category_asc">Catégorie : A à Z</option><option value="category_desc">Catégorie : Z à A</option><option value="title">Titre : A à Z</option></select></label></div></div>{error ? <div className="empty-results">{error}</div> : loading ? <div className="empty-results">Chargement des réclamations…</div> : pageRows.length ? <ReportTable rows={pageRows} /> : <div className="empty-results">Aucune réclamation ne correspond à votre recherche. Modifiez les filtres ou la recherche.</div>}<div className="table-footer"><span>Affichage de <b>{rows.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, rows.length)}</b> sur <b>{rows.length}</b></span><div className="pagination"><button disabled={page <= 1} onClick={() => setPage(page - 1)}>Précédent</button><span>Page {page} sur {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage(page + 1)}>Suivant</button></div></div></section></>
 }
 
 export function DetailPage() {
@@ -176,8 +194,92 @@ export function AnalyticsPage() {
 export function ServicesPage() {
   const [expanded, setExpanded] = useState('')
   const { services, loading, error } = useServices()
-  return <><div className="page-intro"><p>Organisation des ï¿½quipes et suivi de la performance des services.</p></div>{error ? <div className="panel empty-results">{error}</div> : loading ? <div className="panel empty-results">Chargement des services municipauxï¿½</div> : services.length ? <div className="service-grid">{services.map((service) => <section key={service.key} className="panel service-card"><div className={`service-symbol ${service.key}`}><Building2 size={20} /></div><div className="service-heading"><div><h3>{service.name}</h3><span>Service municipal</span></div><button className="more-link" aria-label={`${expanded === service.name ? 'Masquer' : 'Afficher'} les dï¿½tails ${service.name}`} aria-expanded={expanded === service.name} onClick={() => setExpanded(expanded === service.name ? '' : service.name)}><MoreHorizontal size={20} /></button></div><div className="service-numbers"><div><small>ï¿½QUIPE</small><b>{service.agents}</b></div><div><small>TAUX DE TRAITEMENT</small><b>{service.percent}</b></div></div><div className="progress-track"><i style={{ width: service.percent }} /></div>{expanded === service.name && <div className="service-extra"><span>{service.category}</span><Link to={`/reports?q=${encodeURIComponent(service.category)}`}>Voir les rï¿½clamations de ce service ?</Link></div>}<Link className="text-link" to={`/reports?q=${encodeURIComponent(service.category)}`}>Voir les rï¿½clamations<ArrowRight size={15} /></Link></section>)}</div> : <div className="panel empty-results">Aucun service municipal nï¿½est configurï¿½.</div>}</>
+  return (
+    <>
+      <div className="page-intro"><p>Organisation des équipes et suivi de la performance des services.</p></div>
+      {error ? <div className="panel empty-results">{error}</div> : loading ? <div className="panel empty-results">Chargement des services municipaux…</div> : services.length ? (
+        <div className="service-grid">
+          {services.map((service) => (
+            <section key={service.key} className="panel service-card">
+              <div className={"service-symbol " + service.key}><Building2 size={20} /></div>
+              <div className="service-heading">
+                <div><h3>{service.name}</h3><span>Service municipal</span></div>
+                <button className="more-link" aria-label={(expanded === service.name ? 'Masquer' : 'Afficher') + ' les détails ' + service.name} aria-expanded={expanded === service.name} onClick={() => setExpanded(expanded === service.name ? '' : service.name)}><MoreHorizontal size={20} /></button>
+              </div>
+              <div className="service-numbers">
+                <div><small>ÉQUIPE</small><b>{service.agents}</b></div>
+                <div><small>TAUX DE TRAITEMENT</small><b>{service.percent}</b></div>
+              </div>
+              <div className="progress-track"><i style={{ width: service.percent }} /></div>
+              {expanded === service.name && <div className="service-extra"><span>{service.category}</span><Link to={'/reports?q=' + encodeURIComponent(service.category)}>Voir les réclamations de ce service</Link></div>}
+              <Link className="text-link" to={'/reports?q=' + encodeURIComponent(service.category)}>Voir les réclamations<ArrowRight size={15} /></Link>
+            </section>
+          ))}
+        </div>
+      ) : <div className="panel empty-results">Aucun service municipal n’est configuré.</div>}
+    </>
+  )
 }
+export function IdeasPage() {
+  const [ideas, setIdeas] = useState([])
+  const [responses, setResponses] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [savingId, setSavingId] = useState(null)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+
+  async function refresh() {
+    setLoading(true)
+    try {
+      const payload = await apiRequest('/staff/ideas')
+      setIdeas(payload.data ?? [])
+      setError('')
+    } catch (requestError) {
+      setError(requestError.message || 'Impossible de charger les idées citoyennes.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { refresh() }, [])
+
+  async function review(idea, status) {
+    const admin_response = (responses[idea.id] || '').trim()
+    if (status === 'rejected' && !admin_response) {
+      setError('Ajoute un motif avant de refuser cette idée.')
+      return
+    }
+    setSavingId(idea.id)
+    setError('')
+    setNotice('')
+    try {
+      const payload = await apiRequest(`/staff/ideas/${idea.id}`, { method: 'PATCH', body: JSON.stringify({ status, admin_response }) })
+      setIdeas((current) => current.map((item) => item.id === idea.id ? payload.data : item))
+      setNotice(status === 'accepted' ? 'Idée acceptée. Le citoyen verra la décision dans son espace.' : 'Idée refusée et motif transmis au citoyen.')
+    } catch (requestError) {
+      setError(requestError.message || 'La décision n’a pas pu être enregistrée.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const pendingCount = ideas.filter((idea) => idea.status === 'pending').length
+  return <>
+    <div className="page-intro"><p>Consultez les propositions des citoyens et enregistrez la décision de la municipalité.</p></div>
+    <section className="panel ideas-admin-panel">
+      <div className="ideas-admin-heading"><div><span className="ideas-admin-icon"><Lightbulb size={19} /></span><div><h2>Idées citoyennes</h2><p>{pendingCount} en attente · {ideas.length} au total</p></div></div><button className="secondary-button" onClick={refresh} disabled={loading}>Actualiser</button></div>
+      {error && <p className="inline-notice notice-error" role="alert">{error}</p>}
+      {notice && <p className="inline-notice" role="status">{notice}</p>}
+      {loading ? <div className="empty-results">Chargement des idées…</div> : ideas.length ? <div className="ideas-admin-list">{ideas.map((idea) => <article className="idea-admin-card" key={idea.id}>
+        <div className="idea-admin-card-heading"><div><h3>{idea.title}</h3><p>Proposée par <b>{idea.author_name}</b> · {idea.author_email} · {idea.created_at ? new Date(idea.created_at).toLocaleString('fr-FR') : ''}</p></div><span className={`idea-admin-status ${idea.status}`}>{idea.status === 'pending' ? 'En attente' : idea.status === 'accepted' ? 'Acceptée' : 'Refusée'}</span></div>
+        <p className="idea-admin-description">{idea.description}</p>
+        {idea.admin_response && <div className="idea-admin-response"><b>Réponse transmise au citoyen</b><p>{idea.admin_response}</p></div>}
+        {idea.status === 'pending' && <div className="idea-admin-review"><label>Réponse ou motif à transmettre<textarea value={responses[idea.id] || ''} onChange={(event) => setResponses((current) => ({ ...current, [idea.id]: event.target.value }))} maxLength={2000} rows={3} placeholder="Requis en cas de refus ; facultatif pour accepter." /></label><div><button className="idea-reject-button" disabled={savingId === idea.id} onClick={() => review(idea, 'rejected')}><XCircle size={16} /> Refuser</button><button className="idea-accept-button" disabled={savingId === idea.id} onClick={() => review(idea, 'accepted')}><CheckCircle2 size={16} /> {savingId === idea.id ? 'Enregistrement…' : 'Accepter l’idée'}</button></div></div>}
+      </article>)}</div> : <div className="empty-results">Aucune idée citoyenne pour le moment.</div>}
+    </section>
+  </>
+}
+
 export function SettingsPage() { return <><div className="page-intro"><p>Préférences de l’espace d’administration municipale.</p></div><section className="panel settings-placeholder"><span className="settings-symbol"><TrendingUp size={22} /></span><h2>Paramètres de l’administration</h2><p>La configuration des notifications, des équipes et des accès sera disponible ici.</p><Badge kind="demo-badge">Espace en préparation</Badge></section></> }
 
 

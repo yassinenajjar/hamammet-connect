@@ -4,6 +4,7 @@ import { Layout } from './municipal/components/Layout.jsx'
 import {
   AnalyticsPage,
   DetailPage,
+  IdeasPage,
   MapPage,
   Overview,
   ReportsPage,
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/map" element={<MapPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/reports/:id" element={<DetailPage />} />
+          <Route path="/ideas" element={<IdeasPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/settings" element={<SettingsPage />} />

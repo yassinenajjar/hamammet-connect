@@ -32,11 +32,12 @@ function Visiteur({
   allerConnexion,
   allerInscription,
   allerEspace,
+  allerIdee,
   message,
   utilisateur,
+  authLoading,
 }) {
   const [reference, setReference] = useState("");
-  const [trackingSecret, setTrackingSecret] = useState("");
   const [trackingResult, setTrackingResult] = useState("");
   const [trackingError, setTrackingError] = useState("");
   const [statistics, setStatistics] = useState(null);
@@ -55,7 +56,6 @@ function Visiteur({
   async function soumettreSignalement(donnees) {
     const result = await onSubmit(donnees);
     setReference(result.data.reference || "");
-    setTrackingSecret(result.data.tracking_secret || "");
     return result;
   }
 
@@ -81,11 +81,16 @@ function Visiteur({
     try {
       const payload = await apiRequest(`/anonymous/reports/${encodeURIComponent(reference)}/access`, {
         method: "POST",
-        body: JSON.stringify({ tracking_secret: trackingSecret }),
+        body: JSON.stringify({}),
       });
-      setTrackingResult(`${payload.data.reference} · ${payload.data.status}`);
+      const labels = { new: "Nouvelle", in_progress: "En cours", transferred: "Transmise au service compétent", resolved: "Résolue", rejected: "Rejetée" };
+      setTrackingResult({
+        reference: payload.data.reference,
+        status: labels[payload.data.status] || payload.data.status,
+        rejectionReason: payload.data.rejection_reason || "",
+      });
     } catch {
-      setTrackingError("Référence ou code de suivi invalide.");
+      setTrackingError("Aucun signalement trouvé pour cette référence.");
     }
   }
 
@@ -113,7 +118,7 @@ function Visiteur({
               Signaler un problème <span aria-hidden="true">→</span>
             </a>
 
-            {utilisateur?.role !== "citoyen" && (
+            {!utilisateur && !authLoading && (
               <button
                 className="hc-button hc-outline"
                 onClick={allerInscription}
@@ -153,11 +158,11 @@ function Visiteur({
         {statisticsError && <p className="hc-stats-error" role="status">Statistiques momentanément indisponibles.</p>}
       </section>
 
-      {!utilisateur && <section className="hc-panel" id="suivi-anonyme"><h2>Suivre un signalement anonyme</h2><p className="hc-muted">Saisis la référence et le code secret reçus après l’envoi.</p><form className="hc-form-grid" onSubmit={suivre}><label className="hc-field">Référence<input value={reference} onChange={(e) => setReference(e.target.value)} required /></label><label className="hc-field">Code secret<input value={trackingSecret} onChange={(e) => setTrackingSecret(e.target.value)} required /></label><button className="hc-button hc-primary" type="submit">Consulter</button></form>{trackingResult && <p role="status">{trackingResult}</p>}{trackingError && <p className="hc-message hc-error" role="alert">{trackingError}</p>}</section>}
+      {!utilisateur && !authLoading && <section className="hc-panel" id="suivi-anonyme"><h2>Suivre un signalement anonyme</h2><p className="hc-muted">Saisis la référence reçue après l’envoi de ton signalement.</p><form className="hc-form-grid" onSubmit={suivre}><label className="hc-field">Référence<input value={reference} onChange={(e) => setReference(e.target.value)} required /></label><button className="hc-button hc-primary" type="submit">Consulter</button></form>{trackingResult && <div role="status"><p>{trackingResult.reference} · {trackingResult.status}</p>{trackingResult.status === "Rejetée" && <p><b>Motif du rejet :</b> {trackingResult.rejectionReason || "Aucun motif n’a été communiqué."}</p>}</div>}{trackingError && <p className="hc-message hc-error" role="alert">{trackingError}</p>}</section>}
 
       <section className="hc-process" aria-labelledby="hc-process-title">
         <div><span className="hc-eyebrow">COMMENT ÇA MARCHE</span><h2 id="hc-process-title">Un signalement en trois étapes</h2></div>
-        <ol><li><b>Décris le problème</b><span>Ajoute une adresse ou place un point sur la carte.</span></li><li><b>Envoie ton signalement</b><span>Une photo ou une description aide à comprendre la situation.</span></li><li><b>Garde ta référence</b><span>Consulte le suivi avec la référence et le code reçus.</span></li></ol>
+        <ol><li><b>Décris le problème</b><span>Ajoute une adresse ou place un point sur la carte.</span></li><li><b>Envoie ton signalement</b><span>Une photo ou une description aide à comprendre la situation.</span></li><li><b>Garde ta référence</b><span>Consulte le suivi avec la référence reçue.</span></li></ol>
       </section>
 
       <div className="hc-content-grid">
@@ -176,43 +181,39 @@ function Visiteur({
               et à améliorer le quotidien des habitants.
             </p>
 
-            {utilisateur?.role !== "citoyen" ? (
+            {!authLoading && !utilisateur ? (
               <button
                 className="hc-button hc-primary hc-full"
                 onClick={allerInscription}
               >
                 Créer mon compte
               </button>
-            ) : (
+            ) : utilisateur?.role === "citoyen" ? (
               <button
                 className="hc-button hc-primary hc-full"
                 onClick={allerEspace}
               >
                 Ouvrir Mon espace
               </button>
-            )}
+            ) : null}
           </article>
 
           <article className="hc-side-card">
             <span className="hc-heading-symbol">♧</span>
             <h3>Une idée pour Hammamet ?</h3>
             <p>
-              Connecte-toi pour proposer des idées d'innovation
-              et retrouver tes propositions dans ton espace.
+              {utilisateur?.role === "citoyen"
+                ? "Partage une proposition avec la municipalité et suis sa réponse dans ton espace."
+                : utilisateur
+                  ? "Ton compte est connecté."
+                  : "Connecte-toi pour proposer des idées et retrouver tes propositions dans ton espace."}
             </p>
 
-            <button
-              className="hc-button hc-outline hc-full"
-              onClick={
-                utilisateur?.role === "citoyen"
-                  ? allerEspace
-                  : allerConnexion
-              }
-            >
-              {utilisateur?.role === "citoyen"
-                ? "Ouvrir Mon espace"
-                : "Se connecter"}
-            </button>
+            {authLoading ? <button className="hc-button hc-outline hc-full" disabled>Vérification de la session…</button> : utilisateur?.role === "citoyen" ? (
+              <button className="hc-button hc-outline hc-full" onClick={allerIdee}>Proposer une idée</button>
+            ) : !utilisateur ? (
+              <button className="hc-button hc-outline hc-full" onClick={allerConnexion}>Se connecter</button>
+            ) : null}
           </article>
         </aside>
       </div>

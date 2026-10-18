@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, LayoutDashboard, Map, Menu, Settings, ChartNoAxesColumn, Building2, ClipboardList, Search, Waves, X, House } from 'lucide-react'
+import { Bell, ChevronDown, LayoutDashboard, Map, Menu, Settings, ChartNoAxesColumn, Building2, ClipboardList, Search, Waves, X, House, Lightbulb } from 'lucide-react'
 import { urgencyLabels } from '../data/reportOptions'
 import { useReports } from '../hooks/useReports'
 import { apiRequest } from '../../api'
@@ -9,10 +9,11 @@ const links = [
   { to: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { to: '/map', label: 'Carte des problèmes', icon: Map },
   { to: '/reports', label: 'Gestion des réclamations', icon: ClipboardList },
+  { to: '/ideas', label: 'Idées citoyennes', icon: Lightbulb },
   { to: '/analytics', label: 'Statistiques', icon: ChartNoAxesColumn },
   { to: '/services', label: 'Services municipaux', icon: Building2 },
 ]
-const titles = { '/dashboard': 'Tableau de bord', '/map': 'Carte des problèmes', '/reports': 'Gestion des réclamations', '/analytics': 'Statistiques', '/services': 'Services municipaux', '/settings': 'Paramètres' }
+const titles = { '/dashboard': 'Tableau de bord', '/map': 'Carte des problèmes', '/reports': 'Gestion des réclamations', '/ideas': 'Idées citoyennes', '/analytics': 'Statistiques', '/services': 'Services municipaux', '/settings': 'Paramètres' }
 
 export function Layout() {
   const [open, setOpen] = useState(false)
