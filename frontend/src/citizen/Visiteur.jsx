@@ -58,21 +58,12 @@ function Visiteur({
           </div>
         </div>
 
-        <div className="hc-city" aria-label="Illustration de Hammamet">
-          <div className="hc-sun" />
-          <div className="hc-building hc-building-one" />
-          <div className="hc-building hc-building-two" />
-          <div className="hc-building hc-building-three" />
-          <div className="hc-ground" />
-
-          <div className="hc-city-label">
-            <span className="hc-feature-icon blue">⌖</span>
-            <div>
-              <strong>Hammamet Connect</strong>
-              <small>Agir ensemble, localement</small>
-            </div>
+        <figure className="hc-hammamet-photos" aria-label="Photos de la côte de Hammamet">
+          <img className="hc-hammamet-photo-main" src="/images/hammamet-beach.jpg" alt="Plage de Hammamet, avec la ville en arrière-plan" />
+          <div className="hc-hammamet-photo-detail">
+            <img src="/images/hammamet-coast.jpg" alt="Littoral de Hammamet au coucher du soleil" />
           </div>
-        </div>
+        </figure>
       </section>
 
       <section className="hc-features">

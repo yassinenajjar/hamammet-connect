@@ -1004,3 +1004,9 @@
     padding: 24px 18px;
   }
 }
+/* Hammamet photography in the citizen landing hero. */
+.hc-hammamet-photos{position:relative;isolation:isolate;min-height:340px;margin:0;border-radius:22px;overflow:hidden;background:#d8e8e8;box-shadow:0 16px 36px #17233b22}
+.hc-hammamet-photo-main{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 55%}
+.hc-hammamet-photo-detail{position:absolute;right:14px;bottom:14px;width:145px;height:100px;padding:5px;border:1px solid #ffffffb3;border-radius:13px;background:#fff;box-shadow:0 5px 18px #10243855}
+.hc-hammamet-photo-detail img{display:block;width:100%;height:100%;border-radius:9px;object-fit:cover}
+@media(max-width:700px){.hc-hammamet-photos{min-height:260px}.hc-hammamet-photo-detail{right:10px;bottom:10px;width:125px;height:82px}}
